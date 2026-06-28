@@ -12,6 +12,9 @@ Ambitious local-first, private receipt + invoice + ledger intelligence for solop
 
 MIT. Dan Mercede / OrionArchitekton.
 
+**v0.1.0 released:** https://github.com/OrionArchitekton/localfiscal/releases/tag/v0.1.0
+Source: https://github.com/OrionArchitekton/localfiscal (install via git or build from source)
+
 ## Quick start (Docker, recommended)
 
 ```bash
