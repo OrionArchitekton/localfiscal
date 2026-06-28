@@ -6,7 +6,12 @@ services:
       # (the web UI has no authentication — only expose it on a trusted network).
       - "127.0.0.1:8080:8080"
     volumes:
-      - ./data:/app/data
+      # Named volume — initialized with the image's appuser-owned /app/data, so the
+      # non-root container (uid 10001) can write out of the box. Inspect your data with
+      #   docker volume inspect localfiscal_localfiscal-data
+      # To use a host folder instead, replace the line below with "./data:/app/data" and
+      # make ./data writable by uid 10001 (e.g. `mkdir -p data && chmod 777 data`).
+      - localfiscal-data:/app/data
     environment:
       - LOCALFISCAL_DB=/app/data/ledger.db
       - LOCALFISCAL_HOST=0.0.0.0  # in-container bind; host exposure gated by the port mapping above
@@ -16,3 +21,6 @@ services:
   #   image: ollama/ollama
   #   ports:
   #     - "127.0.0.1:11434:11434"
+
+volumes:
+  localfiscal-data:

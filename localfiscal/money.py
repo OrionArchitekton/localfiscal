@@ -46,7 +46,20 @@ def parse_money(text: str, currency: str = DEFAULT_CURRENCY) -> int:
         raise ValueError("no amount: None")
     digits_places = minor_units(currency)
     raw = str(text).strip()
-    negative = raw.startswith("-") or (raw.startswith("(") and raw.endswith(")"))
+
+    # Sign: a single leading minus (after currency symbols/space) or accounting parens.
+    # Any other '-' placement is malformed and rejected rather than silently dropped.
+    core = re.sub(r"[\s$€£¥]", "", raw)
+    minus_positions = [i for i, c in enumerate(core) if c == "-"]
+    if raw.startswith("(") and raw.endswith(")"):
+        negative = True
+    elif minus_positions == [0]:
+        negative = True
+    elif minus_positions:
+        raise ValueError(f"malformed sign in {text!r}")
+    else:
+        negative = False
+
     # keep only digits and separators
     s = re.sub(r"[^0-9.,]", "", raw)
     if not re.search(r"\d", s):
@@ -59,15 +72,24 @@ def parse_money(text: str, currency: str = DEFAULT_CURRENCY) -> int:
         thou_sep = "," if dec_sep == "." else "."
         s = s.replace(thou_sep, "")
         int_part, _, frac = s.partition(dec_sep)
+        is_decimal = True
     elif has_dot or has_comma:
         sep = "." if has_dot else ","
         trailing = s.rsplit(sep, 1)[1]
-        if s.count(sep) == 1 and digits_places > 0 and 0 < len(trailing) <= digits_places:
+        # a single separator with a 1–2 digit tail is a decimal point; otherwise it
+        # is thousands grouping (multiple separators, or a 3-digit group like 1,234)
+        if s.count(sep) == 1 and 0 < len(trailing) <= 2:
             int_part, _, frac = s.partition(sep)
-        else:  # multiple separators or a 3+ digit group → thousands grouping
+            is_decimal = True
+        else:
             int_part, frac = s.replace(sep, ""), ""
+            is_decimal = False
     else:
         int_part, frac = s, ""
+        is_decimal = False
+
+    if is_decimal and digits_places == 0:
+        raise ValueError(f"fractional amount not valid for {currency} (no minor units): {text!r}")
 
     int_part = int_part or "0"
     if digits_places:

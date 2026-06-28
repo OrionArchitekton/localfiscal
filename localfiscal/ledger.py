@@ -61,9 +61,34 @@ class Ledger:
                 )
                 """
             )
+            self._migrate(con)
             con.commit()
         finally:
             con.close()
+
+    def _migrate(self, con: sqlite3.Connection) -> None:
+        """Upgrade a v0.1 ledger (amount REAL, no currency/kind) in place, idempotently.
+
+        v0.1 stored a single float ``amount`` and no ``currency``/``kind``. On such a
+        database ``CREATE TABLE IF NOT EXISTS`` no-ops, so we add the new columns and
+        backfill ``amount_minor`` from the old float amount (×100, rounded). A fresh
+        v0.2 database already has ``amount_minor`` and is left untouched.
+        """
+        cols = {row[1] for row in con.execute("PRAGMA table_info(tx)").fetchall()}
+        if "amount_minor" in cols:
+            return  # already v0.2 schema
+        con.execute("ALTER TABLE tx ADD COLUMN amount_minor INTEGER")
+        if "currency" not in cols:
+            con.execute("ALTER TABLE tx ADD COLUMN currency TEXT NOT NULL DEFAULT 'USD'")
+        if "kind" not in cols:
+            con.execute("ALTER TABLE tx ADD COLUMN kind TEXT NOT NULL DEFAULT 'expense'")
+        if "amount" in cols:
+            # old float dollars → integer cents (best-effort, half-up via ROUND)
+            con.execute(
+                "UPDATE tx SET amount_minor = CAST(ROUND(amount * 100) AS INTEGER)"
+                " WHERE amount_minor IS NULL"
+            )
+        con.execute("UPDATE tx SET amount_minor = 0 WHERE amount_minor IS NULL")
 
     def add(
         self,

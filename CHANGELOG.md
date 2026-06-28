@@ -38,6 +38,15 @@ A correctness, security, and honesty release. Every public claim is now backed b
 - Module-level database side effect on import (created `./data` on `--help`) removed (lazy ledger).
 - Dead code removed (`SELECT *`, last-match-wins category classifier) and dead config wired
   (`LOCALFISCAL_DB`, `OLLAMA_URL`).
+- **v0.1 → v0.2 database migration**: opening an existing v0.1 ledger now migrates it in place
+  (backfills `amount_minor`/`currency`/`kind` from the old float `amount`) instead of crashing.
+- Money parser hardening: `$-5.00` is negative (not silently `+5`), misplaced signs are rejected,
+  and fractional input for zero-decimal currencies (e.g. JPY `123.45`) is rejected.
+- Ingest validates the extracted amount before persisting (an implausible parsed total →
+  needs-review, never a poisoned ledger row).
+- CSV/OFX export injection hardened across **all** outputs (report CSV cells now neutralized too;
+  OFX field values SGML-escaped); `report --fmt csv` now carries income/expense/net (md/json parity).
+- Docker: the data directory uses a named volume so the non-root container can write out of the box.
 
 ## [0.1.0] — 2026-06
 

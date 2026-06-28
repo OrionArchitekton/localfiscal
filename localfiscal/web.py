@@ -91,8 +91,13 @@ async def ingest(file: UploadFile = File(...)):
             os.unlink(tmp)
         except OSError:
             pass
+    if not data["needs_review"]:
+        try:
+            validate_minor(data["amount_minor"], data["currency"])
+        except (ValueError, InvalidAmount):
+            data["needs_review"] = True  # implausible parsed amount → don't persist it
     if data["needs_review"]:
-        return {"status": "needs_review", "reason": "could not parse amount", "fields": data}
+        return {"status": "needs_review", "reason": "could not parse a plausible amount", "fields": data}
     tx = _ledger().add(
         date=data["date"], vendor=data["vendor"], amount_minor=data["amount_minor"],
         currency=data["currency"], category=data["category"], kind=KIND_EXPENSE,

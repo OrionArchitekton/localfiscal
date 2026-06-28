@@ -37,6 +37,10 @@ docker compose up --build
 # open http://127.0.0.1:8080
 ```
 
+Your ledger persists in the `localfiscal-data` Docker volume (the container runs as a non-root
+user, so a named volume works out of the box; `docker volume inspect localfiscal_localfiscal-data`
+to find it). To use a host folder instead, see the note in `docker-compose.yml`.
+
 The web UI binds to **127.0.0.1 only** by default and has **no authentication** — it is meant for
 your own machine. To expose it on a LAN, change the compose port mapping to `0.0.0.0:8080:8080`
 and put it behind your own auth/proxy first.

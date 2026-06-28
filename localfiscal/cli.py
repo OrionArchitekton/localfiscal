@@ -41,9 +41,15 @@ def ingest(
 ):
     """Ingest a receipt. If no amount can be parsed, flag for review (never invent one)."""
     data = extract_receipt(path, use_vision=vision, ollama_url=ollama_url)
-    if data["needs_review"]:
+    review = data["needs_review"]
+    if not review:
+        try:
+            validate_minor(data["amount_minor"], data["currency"])
+        except (ValueError, InvalidAmount):
+            review = True  # parsed an implausible amount → don't persist it
+    if review:
         typer.echo(
-            "NEEDS REVIEW: could not parse an amount from this receipt. "
+            "NEEDS REVIEW: could not parse a plausible amount from this receipt. "
             "Add it manually:  localfiscal add <date> <vendor> <amount> --category <cat>"
         )
         raise typer.Exit(3)

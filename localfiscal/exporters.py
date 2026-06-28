@@ -50,13 +50,18 @@ def transactions_to_csv(txs: list[Transaction]) -> str:
 
 
 def report_to_csv(data: dict) -> str:
-    """Category-summary CSV from the structured report payload."""
+    """Report CSV from the structured payload — carries income/expense/net (md/json
+    parity) plus per-category nets, with every text cell injection-neutralized."""
     buf = io.StringIO()
     writer = csv.writer(buf)
-    writer.writerow(["currency", "category", "net_minor", "net"])
+    writer.writerow(["currency", "section", "label", "minor", "display"])
     for cur, s in data["currencies"].items():
+        for label in ("income", "expense", "net"):
+            writer.writerow([cur, "summary", label, s[label], _csv_safe(format_money(s[label], cur))])
         for category, minor in sorted(s["by_category"].items()):
-            writer.writerow([cur, category, minor, format_money(minor, cur)])
+            writer.writerow(
+                [cur, "category", _csv_safe(category), minor, _csv_safe(format_money(minor, cur))]
+            )
     return buf.getvalue()
 
 
