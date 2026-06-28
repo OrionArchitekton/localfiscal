@@ -20,11 +20,18 @@ _CURRENCY_HINTS = [
     ("¥", "JPY"), ("JPY", "JPY"),
     ("$", "USD"), ("USD", "USD"),
 ]
-# a money-like token: optional symbol then grouped digits with a decimal part
-_AMOUNT_RE = re.compile(r"[\$€£¥]?\s*\d[\d.,]*\d|\d")
-# lines whose label marks the grand total (preferred over subtotal/tax)
-_TOTAL_LABELS = re.compile(r"\b(grand\s*total|total\s*due|balance\s*due|amount\s*due|total)\b", re.I)
-_NON_TOTAL = re.compile(r"\b(sub\s*total|subtotal|tax|vat|tip|change|cash|card)\b", re.I)
+# A money token must carry a currency symbol OR end in a decimal part, so bare
+# integers (dates, quantities, ids) are never mistaken for an amount.
+_AMOUNT_RE = re.compile(r"[\$€£¥]\s*\d[\d.,]*\d?|\d[\d.,]*[.,]\d{2}\b")
+# Strong "amount due" labels rank above a bare "total".
+_STRONG_TOTAL = re.compile(r"\b(grand\s*total|total\s*due|balance\s*due|amount\s*due)\b", re.I)
+_WEAK_TOTAL = re.compile(r"\btotal\b", re.I)
+# Lines that may contain a total-ish word but are NEVER the amount due.
+_EXCLUDE = re.compile(
+    r"\b(sub\s*total|subtotal|tax|vat|tip|gratuity|change|cash\s*back|cashback|"
+    r"savings|saved|discount|points|rewards?|loyalty|balance\s*forward|qty|quantity)\b",
+    re.I,
+)
 
 
 def _read_text(path: Path) -> str:
@@ -61,24 +68,32 @@ def find_amount(text: str, currency: str = DEFAULT_CURRENCY) -> int | None:
     Prefers a line labelled as the grand TOTAL over subtotal/tax lines; never
     invents a value. (v0.1 returned a fabricated ``$42.00`` here.)
     """
-    total_candidates: list[int] = []
-    other_candidates: list[int] = []
+    strong: list[int] = []
+    weak: list[int] = []
+    other: list[int] = []
     for line in text.splitlines():
-        if _NON_TOTAL.search(line) and not _TOTAL_LABELS.search(line):
+        is_strong = bool(_STRONG_TOTAL.search(line))
+        # an excluded line (subtotal/tax/savings/qty/...) is skipped unless it also
+        # carries a strong "amount due" label
+        if _EXCLUDE.search(line) and not is_strong:
             continue
+        is_weak = bool(_WEAK_TOTAL.search(line))
         for tok in _AMOUNT_RE.findall(line):
             try:
                 val = parse_money(tok, currency)
             except ValueError:
                 continue
-            if _TOTAL_LABELS.search(line):
-                total_candidates.append(val)
+            if val <= 0:  # zero / negative is not a confident receipt total
+                continue
+            if is_strong:
+                strong.append(val)
+            elif is_weak:
+                weak.append(val)
             else:
-                other_candidates.append(val)
-    if total_candidates:
-        return max(total_candidates)
-    if other_candidates:
-        return max(other_candidates)
+                other.append(val)
+    for tier in (strong, weak, other):
+        if tier:
+            return max(tier)
     return None
 
 

@@ -18,6 +18,23 @@ CSV_FIELDS = [
     "id", "date", "vendor", "amount_minor", "amount", "currency", "category", "kind", "source",
 ]
 
+# leading chars a spreadsheet treats as a formula (CSV/formula injection)
+_FORMULA_TRIGGERS = ("=", "+", "-", "@", "\t", "\r")
+
+
+def _csv_safe(value: object) -> str:
+    """Neutralize spreadsheet formula injection in a free-text field."""
+    s = "" if value is None else str(value)
+    if s and s[0] in _FORMULA_TRIGGERS:
+        return "'" + s
+    return s
+
+
+def _sgml_escape(value: object) -> str:
+    """Escape SGML-special characters so a field value cannot break OFX structure."""
+    s = "" if value is None else str(value)
+    return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
 
 def transactions_to_csv(txs: list[Transaction]) -> str:
     buf = io.StringIO()
@@ -25,9 +42,9 @@ def transactions_to_csv(txs: list[Transaction]) -> str:
     writer.writerow(CSV_FIELDS)
     for t in txs:
         writer.writerow([
-            t.id, t.date, t.vendor, t.amount_minor,
+            t.id, t.date, _csv_safe(t.vendor), t.amount_minor,
             str(to_decimal(t.amount_minor, t.currency)), t.currency,
-            t.category, t.kind, t.source or "",
+            _csv_safe(t.category), t.kind, _csv_safe(t.source or ""),
         ])
     return buf.getvalue()
 
@@ -88,8 +105,8 @@ def transactions_to_ofx(txs: list[Transaction]) -> str:
         )
         for t in rows:
             trntype = "CREDIT" if t.kind == KIND_INCOME else "DEBIT"
-            name = (t.vendor or "")[:32]
-            memo = (t.category or "")[:32]
+            name = _sgml_escape((t.vendor or "")[:32])
+            memo = _sgml_escape((t.category or "")[:32])
             parts.append(
                 f"<STMTTRN><TRNTYPE>{trntype}<DTPOSTED>{_ofx_date(t.date)}"
                 f"<TRNAMT>{_ofx_amount(t)}<FITID>{t.id}<NAME>{name}<MEMO>{memo}</STMTTRN>\n"
