@@ -30,7 +30,7 @@ def _parse_amount_or_exit(amount: str, currency: str) -> int:
         return validate_minor(minor, currency)
     except (ValueError, InvalidAmount) as exc:
         typer.echo(f"ERROR: {exc}", err=True)
-        raise typer.Exit(2)
+        raise typer.Exit(2) from None
 
 
 @app.command()

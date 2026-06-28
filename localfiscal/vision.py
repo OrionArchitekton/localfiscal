@@ -13,8 +13,8 @@ import base64
 import json
 import os
 import urllib.request
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable, Dict, Optional
 
 DEFAULT_MODEL = os.environ.get("OLLAMA_VISION_MODEL", "llava")
 _TIMEOUT_S = float(os.environ.get("OLLAMA_TIMEOUT_S", "60"))
@@ -25,15 +25,15 @@ _PROMPT = (
 )
 
 # A poster takes (url, json_payload) and returns the decoded JSON dict.
-Poster = Callable[[str, Dict], Dict]
+Poster = Callable[[str, dict], dict]
 
 
-def resolve_endpoint(ollama_url: Optional[str]) -> Optional[str]:
+def resolve_endpoint(ollama_url: str | None) -> str | None:
     """The configured Ollama base URL, or ``None`` when vision is not configured."""
     return ollama_url or os.environ.get("OLLAMA_URL") or None
 
 
-def _default_post(url: str, payload: Dict) -> Dict:
+def _default_post(url: str, payload: dict) -> dict:
     data = json.dumps(payload).encode("utf-8")
     req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"})
     with urllib.request.urlopen(req, timeout=_TIMEOUT_S) as resp:  # noqa: S310 (operator-configured local URL)
@@ -42,10 +42,10 @@ def _default_post(url: str, payload: Dict) -> Dict:
 
 def vision_extract_text(
     path: Path,
-    ollama_url: Optional[str] = None,
+    ollama_url: str | None = None,
     *,
     model: str = DEFAULT_MODEL,
-    http_post: Optional[Poster] = None,
+    http_post: Poster | None = None,
 ) -> str:
     """Return vision-OCR text for a receipt image, or ``""`` when unconfigured/unavailable."""
     endpoint = resolve_endpoint(ollama_url)

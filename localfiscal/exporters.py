@@ -10,7 +10,6 @@ from __future__ import annotations
 import csv
 import io
 from pathlib import Path
-from typing import Dict, List, Optional
 
 from .ledger import KIND_INCOME, Transaction
 from .money import format_money, to_decimal
@@ -20,7 +19,7 @@ CSV_FIELDS = [
 ]
 
 
-def transactions_to_csv(txs: List[Transaction]) -> str:
+def transactions_to_csv(txs: list[Transaction]) -> str:
     buf = io.StringIO()
     writer = csv.writer(buf)
     writer.writerow(CSV_FIELDS)
@@ -33,7 +32,7 @@ def transactions_to_csv(txs: List[Transaction]) -> str:
     return buf.getvalue()
 
 
-def report_to_csv(data: Dict) -> str:
+def report_to_csv(data: dict) -> str:
     """Category-summary CSV from the structured report payload."""
     buf = io.StringIO()
     writer = csv.writer(buf)
@@ -68,8 +67,8 @@ _OFX_HEADER = (
 )
 
 
-def transactions_to_ofx(txs: List[Transaction]) -> str:
-    by_cur: Dict[str, List[Transaction]] = {}
+def transactions_to_ofx(txs: list[Transaction]) -> str:
+    by_cur: dict[str, list[Transaction]] = {}
     for t in txs:
         by_cur.setdefault(t.currency, []).append(t)
 
@@ -106,7 +105,7 @@ def transactions_to_ofx(txs: List[Transaction]) -> str:
 
 
 def export_transactions(
-    txs: List[Transaction], fmt: str = "csv", out: Optional[Path] = None
+    txs: list[Transaction], fmt: str = "csv", out: Path | None = None
 ) -> Path:
     fmt = fmt.lower()
     if fmt == "csv":

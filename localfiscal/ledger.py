@@ -7,10 +7,10 @@ reports can compute a real signed net.
 
 from __future__ import annotations
 
+import builtins
 import sqlite3
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional
 
 from .money import DEFAULT_CURRENCY
 
@@ -28,7 +28,7 @@ class Transaction:
     currency: str
     category: str
     kind: str = KIND_EXPENSE
-    source: Optional[str] = None
+    source: str | None = None
 
     def signed_minor(self) -> int:
         """Income is positive, expense negative — the value that sums to a net."""
@@ -73,7 +73,7 @@ class Ledger:
         currency: str = DEFAULT_CURRENCY,
         category: str = "general",
         kind: str = KIND_EXPENSE,
-        source: Optional[str] = None,
+        source: str | None = None,
     ) -> Transaction:
         if not isinstance(amount_minor, int) or isinstance(amount_minor, bool):
             raise TypeError("amount_minor must be an int (minor units)")
@@ -91,6 +91,7 @@ class Ledger:
             tx_id = cur.lastrowid
         finally:
             con.close()
+        assert tx_id is not None  # AUTOINCREMENT row id is set after a committed INSERT
         return Transaction(
             id=tx_id,
             date=date,
@@ -102,7 +103,7 @@ class Ledger:
             source=source,
         )
 
-    def list(self, limit: int = 50) -> List[Transaction]:
+    def list(self, limit: int = 50) -> builtins.list[Transaction]:
         con = self._connect()
         try:
             rows = con.execute(
@@ -114,7 +115,7 @@ class Ledger:
             con.close()
         return [Transaction(*r) for r in rows]
 
-    def get(self, tx_id: int) -> Optional[Transaction]:
+    def get(self, tx_id: int) -> Transaction | None:
         con = self._connect()
         try:
             row = con.execute(

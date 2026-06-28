@@ -9,7 +9,7 @@ and summed as Python ``int`` (exact, no rounding drift) and only converted to
 from __future__ import annotations
 
 import re
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import ROUND_HALF_UP, Decimal
 
 # minor-unit decimal places per currency (ISO-4217 subset we render correctly)
 _MINOR_UNITS = {"USD": 2, "EUR": 2, "GBP": 2, "CAD": 2, "AUD": 2, "JPY": 0}

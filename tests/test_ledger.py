@@ -1,6 +1,5 @@
 """S1 — ledger stores money exactly (integer minor-units + currency), no float."""
 
-from pathlib import Path
 
 from localfiscal.ledger import Ledger, Transaction
 from localfiscal.money import parse_money

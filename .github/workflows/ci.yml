@@ -11,5 +11,11 @@ jobs:
         with:
           python-version: '3.11'
       - run: pip install -e ".[dev]"
-      - run: pytest -q --tb=line
-      - run: python -m localfiscal.cli health
+      - name: Lint (ruff)
+        run: ruff check .
+      - name: Type-check (mypy)
+        run: mypy
+      - name: Test + coverage
+        run: pytest --cov=localfiscal --cov-report=term-missing --cov-fail-under=85
+      - name: CLI smoke
+        run: python -m localfiscal.cli health

@@ -80,7 +80,7 @@ def root():
 @app.post("/ingest")
 async def ingest(file: UploadFile = File(...)):
     UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-    safe_name = safe_upload_path(UPLOAD_DIR, file.filename).name
+    safe_name = safe_upload_path(UPLOAD_DIR, file.filename or "").name
     fd, tmp = tempfile.mkstemp(dir=UPLOAD_DIR, suffix=Path(safe_name).suffix)
     try:
         with os.fdopen(fd, "wb") as out:
@@ -108,8 +108,10 @@ def make_invoice(
     try:
         minor = validate_minor(parse_money(amount, currency), currency)
     except (ValueError, InvalidAmount) as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
-    pdf = generate_invoice_pdf(client, minor, currency.upper(), "Professional services", Path("data/invoice.pdf"))
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    pdf = generate_invoice_pdf(
+        client, minor, currency.upper(), "Professional services", Path("data/invoice.pdf")
+    )
     return FileResponse(pdf, filename="invoice.pdf")
 
 
@@ -124,7 +126,7 @@ def health():
     return {"ok": True, "version": __version__, "db_exists": _db_path().exists()}
 
 
-def run() -> None:  # console-script entrypoint
+def run() -> None:  # pragma: no cover - console-script entrypoint (starts a server)
     import uvicorn
 
     uvicorn.run(
@@ -134,5 +136,5 @@ def run() -> None:  # console-script entrypoint
     )
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     run()

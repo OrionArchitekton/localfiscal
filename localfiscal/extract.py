@@ -10,7 +10,6 @@ from __future__ import annotations
 import re
 from datetime import date
 from pathlib import Path
-from typing import Dict, Optional
 
 from .money import DEFAULT_CURRENCY, parse_money
 
@@ -30,11 +29,14 @@ _NON_TOTAL = re.compile(r"\b(sub\s*total|subtotal|tax|vat|tip|change|cash|card)\
 
 def _read_text(path: Path) -> str:
     try:
-        if path.suffix.lower() == ".pdf":
+        suffix = path.suffix.lower()
+        if suffix == ".pdf":
             from pypdf import PdfReader
 
             reader = PdfReader(str(path))
             return "\n".join(p.extract_text() or "" for p in reader.pages)
+        if suffix in (".txt", ".text", ".md"):
+            return Path(path).read_text(encoding="utf-8", errors="ignore")
         try:
             import pytesseract
             from PIL import Image
@@ -53,7 +55,7 @@ def detect_currency(text: str) -> str:
     return DEFAULT_CURRENCY
 
 
-def find_amount(text: str, currency: str = DEFAULT_CURRENCY) -> Optional[int]:
+def find_amount(text: str, currency: str = DEFAULT_CURRENCY) -> int | None:
     """Return the receipt's amount in minor units, or ``None`` if none is parseable.
 
     Prefers a line labelled as the grand TOTAL over subtotal/tax lines; never
@@ -109,8 +111,8 @@ def _guess_date(text: str) -> str:
 def extract_receipt(
     path: Path,
     use_vision: bool = False,
-    ollama_url: Optional[str] = None,
-) -> Dict:
+    ollama_url: str | None = None,
+) -> dict:
     """Extract fields from a receipt. Returns a dict that always includes
     ``amount_minor`` (int minor units or ``None``), ``currency`` and ``needs_review``.
     """

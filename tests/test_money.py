@@ -5,11 +5,11 @@ from decimal import Decimal
 import pytest
 
 from localfiscal.money import (
-    parse_money,
     format_money,
-    to_decimal,
     from_decimal,
     minor_units,
+    parse_money,
+    to_decimal,
 )
 
 
