@@ -1,0 +1,16 @@
+version: '3.8'
+services:
+  localfiscal:
+    build: .
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/app/data
+    environment:
+      - LOCALFISCAL_DB=/app/data/ledger.db
+      - OLLAMA_URL=http://host.docker.internal:11434  # optional, for vision
+  # Optional: ollama (user starts separately for GPU/CPU vision)
+  # ollama:
+  #   image: ollama/ollama
+  #   ports:
+  #     - "11434:11434"
