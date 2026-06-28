@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import typer
@@ -17,11 +18,13 @@ from .validate import InvalidAmount, validate_currency, validate_minor
 
 app = typer.Typer(help="localfiscal — local-first finance that actually works")
 
-DEFAULT_DB = Path("data/ledger.db")
+def _db_path() -> Path:
+    """Ledger path — honors $LOCALFISCAL_DB so the CLI and web UI share one ledger."""
+    return Path(os.environ.get("LOCALFISCAL_DB", "data/ledger.db"))
 
 
-def _ledger(db: Path = DEFAULT_DB) -> Ledger:
-    return Ledger(db)
+def _ledger() -> Ledger:
+    return Ledger(_db_path())
 
 
 def _parse_amount_or_exit(amount: str, currency: str) -> int:
@@ -138,15 +141,16 @@ def export(
     out: Path | None = typer.Option(None, "--out"),
 ):
     """Export the full ledger for accountants (CSV or OFX/QFX)."""
-    dest = export_transactions(_ledger().list(limit=1_000_000), fmt, out)
+    dest = export_transactions(_ledger().list(limit=None), fmt, out)
     typer.echo(f"EXPORT: {dest}")
 
 
 @app.command()
 def health():
     """Quick health + db check."""
+    db = _db_path()
     typer.echo(f"localfiscal v{__version__} OK")
-    typer.echo(f"db: {DEFAULT_DB} exists={DEFAULT_DB.exists()}")
+    typer.echo(f"db: {db} exists={db.exists()}")
 
 
 if __name__ == "__main__":

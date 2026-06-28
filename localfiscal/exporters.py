@@ -42,7 +42,7 @@ def transactions_to_csv(txs: list[Transaction]) -> str:
     writer.writerow(CSV_FIELDS)
     for t in txs:
         writer.writerow([
-            t.id, t.date, _csv_safe(t.vendor), t.amount_minor,
+            t.id, _csv_safe(t.date), _csv_safe(t.vendor), t.amount_minor,
             str(to_decimal(t.amount_minor, t.currency)), t.currency,
             _csv_safe(t.category), t.kind, _csv_safe(t.source or ""),
         ])

@@ -30,7 +30,7 @@ def _summarize(txs: list[Transaction], currency: str) -> dict:
 
 def report_data(ledger: Ledger, period: str) -> dict:
     """Structured, exact report payload (the single source every format renders)."""
-    txs = ledger.list(limit=1_000_000)
+    txs = ledger.list(limit=None)  # whole ledger — reports must not silently drop rows
     currencies = sorted({t.currency for t in txs}) or [DEFAULT_CURRENCY]
     return {
         "period": period,

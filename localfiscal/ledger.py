@@ -129,14 +129,17 @@ class Ledger:
             source=source,
         )
 
-    def list(self, limit: int = 50) -> builtins.list[Transaction]:
+    def list(self, limit: int | None = 50) -> builtins.list[Transaction]:
+        """Recent transactions (newest first). ``limit=None`` returns the whole ledger
+        (used by reports and exports so no rows are silently dropped)."""
+        sql = "SELECT id,date,vendor,amount_minor,currency,category,kind,source FROM tx ORDER BY id DESC"
+        params: tuple = ()
+        if limit is not None:
+            sql += " LIMIT ?"
+            params = (limit,)
         con = self._connect()
         try:
-            rows = con.execute(
-                "SELECT id,date,vendor,amount_minor,currency,category,kind,source"
-                " FROM tx ORDER BY id DESC LIMIT ?",
-                (limit,),
-            ).fetchall()
+            rows = con.execute(sql, params).fetchall()
         finally:
             con.close()
         return [Transaction(*r) for r in rows]
