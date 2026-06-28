@@ -1,16 +1,18 @@
-version: '3.8'
 services:
   localfiscal:
     build: .
     ports:
-      - "8080:8080"
+      # Host-loopback only by default. Change to "0.0.0.0:8080:8080" to expose on your LAN
+      # (the web UI has no authentication — only expose it on a trusted network).
+      - "127.0.0.1:8080:8080"
     volumes:
       - ./data:/app/data
     environment:
       - LOCALFISCAL_DB=/app/data/ledger.db
-      - OLLAMA_URL=http://host.docker.internal:11434  # optional, for vision
-  # Optional: ollama (user starts separately for GPU/CPU vision)
+      - LOCALFISCAL_HOST=0.0.0.0  # in-container bind; host exposure gated by the port mapping above
+      # Optional local vision (off by default). Start ollama separately, then uncomment:
+      # - OLLAMA_URL=http://host.docker.internal:11434
   # ollama:
   #   image: ollama/ollama
   #   ports:
-  #     - "11434:11434"
+  #     - "127.0.0.1:11434:11434"
