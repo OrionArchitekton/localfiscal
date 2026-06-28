@@ -1,60 +1,138 @@
 #!/usr/bin/env python
-"""localfiscal CLI — ambitious local receipt + invoice + ledger for solopreneurs."""
+"""localfiscal CLI — local-first receipt + invoice + ledger for solopreneurs."""
+
+from __future__ import annotations
+
+from pathlib import Path
 
 import typer
-from pathlib import Path
-from .ledger import Ledger, Transaction
+
+from . import __version__
+from .exporters import export_transactions
 from .extract import extract_receipt
 from .invoice import generate_invoice_pdf
-from .report import generate_report
+from .ledger import KIND_EXPENSE, KIND_INCOME, Ledger
+from .money import DEFAULT_CURRENCY, format_money, parse_money
+from .validate import InvalidAmount, validate_minor
 
 app = typer.Typer(help="localfiscal — local-first finance that actually works")
 
-ledger_path = Path("data/ledger.db")
-ledger = Ledger(ledger_path)
+DEFAULT_DB = Path("data/ledger.db")
+
+
+def _ledger(db: Path = DEFAULT_DB) -> Ledger:
+    return Ledger(db)
+
+
+def _parse_amount_or_exit(amount: str, currency: str) -> int:
+    try:
+        minor = parse_money(amount, currency)
+        return validate_minor(minor, currency)
+    except (ValueError, InvalidAmount) as exc:
+        typer.echo(f"ERROR: {exc}", err=True)
+        raise typer.Exit(2)
+
 
 @app.command()
-def ingest(path: Path = typer.Argument(..., exists=True, help="Receipt image or PDF")):
-    """Ingest a receipt (local vision or fallback)."""
-    data = extract_receipt(path)
-    tx = ledger.add(
+def ingest(
+    path: Path = typer.Argument(..., exists=True, help="Receipt image or PDF"),
+    vision: bool = typer.Option(False, "--vision", help="Use a local Ollama vision model if configured"),
+    ollama_url: str = typer.Option(None, "--ollama-url", help="Ollama base URL (else $OLLAMA_URL)"),
+):
+    """Ingest a receipt. If no amount can be parsed, flag for review (never invent one)."""
+    data = extract_receipt(path, use_vision=vision, ollama_url=ollama_url)
+    if data["needs_review"]:
+        typer.echo(
+            "NEEDS REVIEW: could not parse an amount from this receipt. "
+            "Add it manually:  localfiscal add <date> <vendor> <amount> --category <cat>"
+        )
+        raise typer.Exit(3)
+    tx = _ledger().add(
         date=data["date"],
         vendor=data["vendor"],
-        amount=data["amount"],
-        category=data.get("category", "uncategorized"),
+        amount_minor=data["amount_minor"],
+        currency=data["currency"],
+        category=data["category"],
+        kind=KIND_EXPENSE,
         source=str(path),
     )
-    typer.echo(f"INGESTED: {tx.id} | {tx.date} | {tx.vendor} | {tx.amount} | {tx.category}")
+    typer.echo(
+        f"INGESTED: {tx.id} | {tx.date} | {tx.vendor} | "
+        f"{format_money(tx.amount_minor, tx.currency)} | {tx.category}"
+    )
+
 
 @app.command()
-def add(date: str, vendor: str, amount: float, category: str = typer.Option("general", "--category")):
-    """Manual add transaction."""
-    tx = ledger.add(date=date, vendor=vendor, amount=amount, category=category)
-    typer.echo(f"ADDED: {tx.id}")
+def add(
+    date: str,
+    vendor: str,
+    amount: str = typer.Argument(..., help="Amount, e.g. 12.50 or '$1,234.56'"),
+    currency: str = typer.Option(DEFAULT_CURRENCY, "--currency"),
+    category: str = typer.Option("general", "--category"),
+    income: bool = typer.Option(False, "--income", help="Record as income (default: expense)"),
+):
+    """Manually add a transaction (amount parsed exactly to minor units)."""
+    minor = _parse_amount_or_exit(amount, currency)
+    kind = KIND_INCOME if income else KIND_EXPENSE
+    tx = _ledger().add(
+        date=date, vendor=vendor, amount_minor=minor, currency=currency.upper(),
+        category=category, kind=kind,
+    )
+    typer.echo(f"ADDED: {tx.id} | {format_money(tx.amount_minor, tx.currency)} | {tx.kind}")
+
 
 @app.command("list-tx")
 def list_tx(limit: int = typer.Option(20, "--limit")):
     """List recent transactions."""
-    for t in ledger.list(limit=limit):
-        typer.echo(f"{t.id} | {t.date} | {t.vendor} | {t.amount:.2f} | {t.category}")
+    for t in _ledger().list(limit=limit):
+        typer.echo(
+            f"{t.id} | {t.date} | {t.vendor} | "
+            f"{format_money(t.amount_minor, t.currency)} | {t.category} | {t.kind}"
+        )
+
 
 @app.command()
-def invoice(client: str, amount: float, description: str = "Services", out: Path = Path("invoice.pdf")):
+def invoice(
+    client: str,
+    amount: str = typer.Argument(..., help="Invoice amount, e.g. 1200 or '$1,200.00'"),
+    currency: str = typer.Option(DEFAULT_CURRENCY, "--currency"),
+    description: str = typer.Option("Professional services", "--description"),
+    out: Path = typer.Option(Path("invoice.pdf"), "--out"),
+):
     """Generate a simple invoice PDF."""
-    pdf_path = generate_invoice_pdf(client, amount, description, out)
+    minor = _parse_amount_or_exit(amount, currency)
+    pdf_path = generate_invoice_pdf(client, minor, currency.upper(), description, out)
     typer.echo(f"INVOICE: {pdf_path}")
 
+
 @app.command()
-def report(period: str = typer.Option("current", "--period"), fmt: str = typer.Option("md", "--fmt")):
-    """Generate P&L style report."""
-    out = generate_report(ledger, period, fmt)
+def report(
+    period: str = typer.Option("current", "--period"),
+    fmt: str = typer.Option("md", "--fmt", help="md | json | csv"),
+):
+    """Generate a category + net (income/expense) report."""
+    from .report import generate_report
+
+    out = generate_report(_ledger(), period, fmt)
     typer.echo(f"REPORT: {out}")
+
+
+@app.command()
+def export(
+    fmt: str = typer.Option("csv", "--fmt", help="csv | ofx"),
+    out: Path = typer.Option(None, "--out"),
+):
+    """Export the full ledger for accountants (CSV or OFX/QFX)."""
+    dest = export_transactions(_ledger().list(limit=1_000_000), fmt, out)
+    typer.echo(f"EXPORT: {dest}")
+
 
 @app.command()
 def health():
     """Quick health + db check."""
-    typer.echo("localfiscal v0.1.0 OK")
-    typer.echo(f"db: {ledger_path} exists={ledger_path.exists()}")
+    typer.echo(f"localfiscal v{__version__} OK")
+    typer.echo(f"db: {DEFAULT_DB} exists={DEFAULT_DB.exists()}")
+
 
 if __name__ == "__main__":
     app()
