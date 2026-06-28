@@ -13,6 +13,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from .money import DEFAULT_CURRENCY
+from .validate import validate_currency
 
 KIND_INCOME = "income"
 KIND_EXPENSE = "expense"
@@ -104,7 +105,7 @@ class Ledger:
             raise TypeError("amount_minor must be an int (minor units)")
         if kind not in _VALID_KINDS:
             raise ValueError(f"kind must be one of {_VALID_KINDS}, got {kind!r}")
-        currency = currency.upper()
+        currency = validate_currency(currency)
         con = self._connect()
         try:
             cur = con.execute(

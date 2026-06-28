@@ -57,7 +57,7 @@ localfiscal --help
 
 ```bash
 localfiscal add 2026-06-28 "Coffee Shop" 4.50 --category meals       # expense
-localfiscal add 2026-06-01 "Client A" "$1,234.56" --income           # income
+localfiscal add 2026-06-01 "Client A" '$1,234.56' --income           # income (single-quote $ in shells)
 localfiscal ingest receipt.pdf                                       # parse a receipt
 localfiscal ingest receipt.jpg --vision --ollama-url http://localhost:11434
 localfiscal list-tx

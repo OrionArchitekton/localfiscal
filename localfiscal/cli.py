@@ -13,7 +13,7 @@ from .extract import extract_receipt
 from .invoice import generate_invoice_pdf
 from .ledger import KIND_EXPENSE, KIND_INCOME, Ledger
 from .money import DEFAULT_CURRENCY, format_money, parse_money
-from .validate import InvalidAmount, validate_minor
+from .validate import InvalidAmount, validate_currency, validate_minor
 
 app = typer.Typer(help="localfiscal — local-first finance that actually works")
 
@@ -26,6 +26,7 @@ def _ledger(db: Path = DEFAULT_DB) -> Ledger:
 
 def _parse_amount_or_exit(amount: str, currency: str) -> int:
     try:
+        validate_currency(currency)
         minor = parse_money(amount, currency)
         return validate_minor(minor, currency)
     except (ValueError, InvalidAmount) as exc:
@@ -37,9 +38,17 @@ def _parse_amount_or_exit(amount: str, currency: str) -> int:
 def ingest(
     path: Path = typer.Argument(..., exists=True, help="Receipt image or PDF"),
     vision: bool = typer.Option(False, "--vision", help="Use a local Ollama vision model if configured"),
-    ollama_url: str = typer.Option(None, "--ollama-url", help="Ollama base URL (else $OLLAMA_URL)"),
+    ollama_url: str | None = typer.Option(None, "--ollama-url", help="Ollama base URL (else $OLLAMA_URL)"),
 ):
     """Ingest a receipt. If no amount can be parsed, flag for review (never invent one)."""
+    if vision:
+        from .vision import resolve_endpoint
+
+        if resolve_endpoint(ollama_url) is None:
+            typer.echo(
+                "NOTE: --vision requested but no Ollama endpoint is configured "
+                "(--ollama-url or $OLLAMA_URL); using the heuristic parser."
+            )
     data = extract_receipt(path, use_vision=vision, ollama_url=ollama_url)
     review = data["needs_review"]
     if not review:
@@ -126,7 +135,7 @@ def report(
 @app.command()
 def export(
     fmt: str = typer.Option("csv", "--fmt", help="csv | ofx"),
-    out: Path = typer.Option(None, "--out"),
+    out: Path | None = typer.Option(None, "--out"),
 ):
     """Export the full ledger for accountants (CSV or OFX/QFX)."""
     dest = export_transactions(_ledger().list(limit=1_000_000), fmt, out)

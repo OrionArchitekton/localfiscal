@@ -65,9 +65,14 @@ is cut from public copy to a roadmap.
 - **Seam:** report. **Acceptance:** net = income − expense, exact.
 
 ### S6 — CSV export is real (P1, claim-honesty)
-- `report --fmt csv` (and an export command) writes RFC-4180 CSV of transactions that re-parses with
-  `csv.reader` into the same rows/amounts. No JSON-in-a-.csv.
-- **Seam:** report/export. **Acceptance:** `csv.reader` round-trips; header row present; amounts exact.
+- Two distinct CSV artifacts, both valid RFC-4180 (no JSON-in-a-.csv):
+  - **`export --fmt csv`** writes the full **transaction** ledger that re-parses with `csv.reader`
+    into the same rows/amounts (the round-trippable accountant export).
+  - **`report --fmt csv`** writes the **summary** report (income/expense/net + by-category per
+    currency) — the same content as the md/json report, in CSV form (not transactions).
+- Every text cell in either CSV is neutralized against spreadsheet formula injection.
+- **Seam:** report/export. **Acceptance:** the transaction export round-trips through `csv.reader`;
+  the report CSV carries income/expense/net consistent with md/json; no cell triggers a formula.
 
 ### S7 — OFX/QFX export is real (P1, claim-honesty)
 - An export command emits a well-formed OFX document (valid header + `<OFX>` SGML body, `<STMTTRN>`
