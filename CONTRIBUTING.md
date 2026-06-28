@@ -1,9 +1,16 @@
 # Contributing to localfiscal
 
-- Follow the ambitious result.
-- One vertical slice RED→GREEN at a time.
-- Tests + docker proof required for changes that affect core flows.
-- Run `pytest -q` before PR.
-- MIT license, Dan Mercede identity on commits for this repo.
+- One vertical slice at a time, test-first (RED → GREEN → refactor).
+- Money is always exact integer minor units — never floats. Ground every public claim in code.
+- CI must stay green. Before opening a PR, run locally:
 
-Thank you for helping make private ambitious finance tooling real.
+  ```bash
+  pip install -e ".[dev]"
+  ruff check .
+  mypy
+  pytest --cov=localfiscal --cov-fail-under=85
+  ```
+
+- MIT license; commits to this repo use the Dan Mercede identity.
+
+Thank you for helping make private, local-first finance tooling real.

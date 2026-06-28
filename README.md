@@ -1,84 +1,87 @@
 # localfiscal
 
-Ambitious local-first, private receipt + invoice + ledger intelligence for solopreneurs and small businesses.
+Local-first, private receipt + invoice + ledger for solopreneurs and small businesses.
+Your books stay on your machine in a single sqlite file — no cloud, no account, no data exfil.
 
-**The problem it solves:** Receipt chaos, tax-time pain, SaaS lock-in and data exfil for people who just want their books to work privately and simply. Existing OSS is dated or incomplete; cloud tools cost money and leak data. No good working ambitious OSS solution existed — until now.
+**The problem it solves:** receipt chaos and tax-time pain without handing your financial
+data to a SaaS. localfiscal keeps everything local and gets the boring, important parts right
+— money is exact, amounts are never invented, and exports import cleanly into accounting tools.
 
-- Fully local by default (sqlite file)
-- Optional local LLM / vision via Ollama for extraction & categorization
-- Beautiful-enough web UI + powerful CLI
-- Invoice PDFs, reports, exports (CSV/OFX)
-- One-command Docker
+## What it does (all shipped, all tested)
+
+- **Exact money.** Amounts are stored as integer minor units (cents) with an ISO-4217 currency —
+  never floats. The markdown, JSON, and CSV reports always agree to the cent.
+- **Receipt extraction.** A heuristic parser reads vendor / amount / date / category from
+  image or PDF receipts (locale-aware, prefers the grand **TOTAL**). When it can't read an amount
+  it flags the receipt **needs-review** rather than inventing one.
+- **Optional local vision.** Off by default. Point it at your own [Ollama](https://ollama.com)
+  endpoint (`--vision` / `$OLLAMA_URL`) to use a local vision model for OCR. No endpoint → no
+  network call, ever.
+- **Invoices.** Generate clean invoice PDFs (fpdf2).
+- **Reports.** Income / expense / **net** per currency, as Markdown, JSON, or CSV.
+- **Exports accountants use.** Real **CSV** (RFC-4180) and **OFX/QFX** of your ledger.
+- **CLI + web UI.** Six CLI commands; a minimal FastAPI web UI (loopback-only by default).
+- **One-command Docker.**
 
 MIT. Dan Mercede / OrionArchitekton.
 
-**v0.1.0 released:** https://github.com/OrionArchitekton/localfiscal/releases/tag/v0.1.0
-Source: https://github.com/OrionArchitekton/localfiscal (install via git or build from source)
+**Releases:** https://github.com/OrionArchitekton/localfiscal/releases ·
+**Source:** https://github.com/OrionArchitekton/localfiscal · **Changes:** [CHANGELOG.md](CHANGELOG.md)
 
-## Quick start (Docker, recommended)
+## Quick start (Docker)
 
 ```bash
 git clone https://github.com/OrionArchitekton/localfiscal.git
 cd localfiscal
 docker compose up --build
-# open http://localhost:8080
+# open http://127.0.0.1:8080
 ```
 
-CLI also available inside or via pipx / editable.
+Your ledger persists in the `localfiscal-data` Docker volume (the container runs as a non-root
+user, so a named volume works out of the box; `docker volume inspect localfiscal_localfiscal-data`
+to find it). To use a host folder instead, see the note in `docker-compose.yml`.
 
-See `docs/quickstart.md` (or README below) for non-docker.
+The web UI binds to **127.0.0.1 only** by default and has **no authentication** — it is meant for
+your own machine. To expose it on a LAN, change the compose port mapping to `0.0.0.0:8080:8080`
+and put it behind your own auth/proxy first.
 
-## What v1 delivers (ambitious but shipped)
-
-- Receipt/image/PDF upload → local extraction (vendor, amount, date, suggested category)
-- Ledger (add/edit/list/transactions)
-- Invoice creation → clean PDF
-- Reports: P&L, by category (md + csv)
-- Exports for accountants
-- All private, no cloud required for core
-- Tests + docker proof that the core flows work
-
-## Philosophy (ambitious result)
-
-We follow the ambitious result: solve the painful unsolved problem end-to-end with quality rather than ship a tiny toy. v1 is fuller-than-MVP but has a hard cut-line so it actually ships and proves itself.
-
-## Install (dev / CLI)
-
-Requires Python 3.11+.
+## Install (CLI, Python 3.11+)
 
 ```bash
-python -m venv .venv
-source .venv/bin/activate
+python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
 localfiscal --help
 ```
 
-## Docker one-liner proof
+## CLI usage
 
 ```bash
-docker compose up -d
-curl -f http://localhost:8080/health
-# then use the web or docker exec for cli
+localfiscal add 2026-06-28 "Coffee Shop" 4.50 --category meals       # expense
+localfiscal add 2026-06-01 "Client A" '$1,234.56' --income           # income (single-quote $ in shells)
+localfiscal ingest receipt.pdf                                       # parse a receipt
+localfiscal ingest receipt.jpg --vision --ollama-url http://localhost:11434
+localfiscal list-tx
+localfiscal invoice "Acme Co" 1200 --out invoice.pdf
+localfiscal report --fmt md         # or json | csv
+localfiscal export --fmt csv        # or ofx  — full ledger for your accountant
+localfiscal health
 ```
 
-## License
+Amounts accept grouped/locale formats (`1,234.56`, `1.234,56`) and are validated at the boundary
+(no negative, non-finite, or absurd values reach the ledger).
 
-MIT © 2026 Dan Mercede
+## Privacy & security
 
-## Status
+- **No network calls** unless you explicitly enable Ollama vision. No telemetry.
+- SQL is fully parameterized; uploaded filenames are sanitized (no path traversal).
+- The Docker image runs as a **non-root** user; the server binds loopback by default.
+- The web UI has no auth — keep it local or front it with your own auth.
 
-v0.1 (ambitious localfiscal) — see CHANGELOG and the MAP that drove this build.
+## Roadmap
 
-## Roadmap (deferred)
-
-v0.2: bank csv auto-import, recurring, better vision models, MCP server surface for agents, multi-user self-host, polish.
+Bank-statement auto-import, recurring transactions, an MCP server surface for agents, and
+multi-user self-host are deferred to a later release. See [CHANGELOG.md](CHANGELOG.md).
 
 ## Contributing
 
-See CONTRIBUTING.md. We love tests, small slices, and ambitious scope that ships.
-
-Run tests: `pytest -q`
-
-## Why this exists
-
-Because consumers and businesses deserve a tool that respects their time, money, and privacy — and does the hard boring parts well without forcing them into another subscription or data hostage situation. We built the working solution that didn't exist.
+See [CONTRIBUTING.md](CONTRIBUTING.md). Tests: `pytest -q`. Lint/type: `ruff check . && mypy`.
