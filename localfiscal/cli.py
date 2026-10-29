@@ -155,9 +155,18 @@ def demo(out: Path = typer.Option(Path("demo-books"), "--out", help="New folder 
     except FileExistsError:
         typer.echo("ERROR: output path already exists; choose a new folder with --out.", err=True)
         raise typer.Exit(2) from None
+    except (ValueError, OSError) as exc:
+        typer.echo(f"ERROR: {exc}", err=True)
+        raise typer.Exit(2) from None
+    from .report import report_data
+
+    totals = report_data(Ledger(folder / "ledger.db"), "sample")["currencies"]["USD"]
     typer.echo(f"DEMO: {folder.resolve()}")
     typer.echo("Open report-sample.md, invoice.pdf or transactions.csv in that folder.")
-    typer.echo("Fictional data: income $1,250.00, expenses $54.50, net $1,195.50.")
+    typer.echo(
+        f"Fictional data: income {format_money(totals['income'])}, "
+        f"expenses {format_money(totals['expense'])}, net {format_money(totals['net'])}."
+    )
 
 
 @app.command()

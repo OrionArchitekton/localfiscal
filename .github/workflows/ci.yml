@@ -27,3 +27,4 @@ jobs:
         run: |
           python -m pip install pipx
           python -m pipx run --spec . localfiscal demo --out installed-sample
+          python -c "import sqlite3; db=sqlite3.connect('installed-sample/ledger.db'); assert db.execute('SELECT sum(CASE WHEN kind=? THEN amount_minor ELSE -amount_minor END) FROM tx', ('income',)).fetchone()[0] == 119550"
