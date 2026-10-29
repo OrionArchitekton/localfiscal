@@ -29,4 +29,6 @@ with tempfile.TemporaryDirectory(prefix="installed-localfiscal-") as temporary:
     income = sum(amount for kind, amount in rows if kind == "income")
     expense = sum(amount for kind, amount in rows if kind == "expense")
     assert (income, expense, income - expense, len(rows)) == (125000, 5450, 119550, 3)
+    csv_bytes = (books / "transactions.csv").read_bytes()
+    assert b"\r\r\n" not in csv_bytes and len(csv_bytes.splitlines()) == 4
     print("Pinned archive verified: income 125000, expense 5450, net 119550 minor units")

@@ -26,6 +26,9 @@ def test_demo_creates_sample_books_without_touching_real_ledger(tmp_path, monkey
     assert "$1,195.50" in (folder / "report-sample.md").read_text()
     with (folder / "transactions.csv").open() as stream:
         assert len(list(csv.DictReader(stream))) == 3
+    csv_bytes = (folder / "transactions.csv").read_bytes()
+    assert b"\r\r\n" not in csv_bytes
+    assert len(csv_bytes.splitlines()) == 4
     assert "$1,250.00" in PdfReader(folder / "invoice.pdf").pages[0].extract_text()
     assert not real.exists()
     assert set(tmp_path.iterdir()) == {tmp_path / "sample"}
@@ -49,6 +52,23 @@ def test_demo_refuses_existing_path(tmp_path, kind):
     assert result.exit_code == 2
     assert "already exists" in result.output
     assert not (target / "ledger.db").exists()
+
+
+def test_demo_csv_has_no_blank_records_with_windows_text_translation(tmp_path, monkeypatch):
+    open_path = Path.open
+
+    def windows_open(path, mode="r", buffering=-1, encoding=None, errors=None, newline=None):
+        if path.name == "transactions.csv" and "b" not in mode and newline is None:
+            newline = "\r\n"
+        return open_path(path, mode, buffering, encoding, errors, newline)
+
+    monkeypatch.setattr(Path, "open", windows_open)
+    target = tmp_path / "sample"
+    result = CliRunner().invoke(app, ["demo", "--out", str(target)])
+    assert result.exit_code == 0, result.output
+    data = (target / "transactions.csv").read_bytes()
+    assert b"\r\r\n" not in data
+    assert len(data.splitlines()) == 4  # Header and three fictional transactions.
 
 
 def test_failed_demo_removes_partial_output_and_can_be_retried(tmp_path, monkeypatch):
