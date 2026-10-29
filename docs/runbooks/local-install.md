@@ -47,7 +47,7 @@ localfiscal-web
 
 Open [the UI](http://127.0.0.1:8080), check health and download the report. Stop with Ctrl+C. Clear the setting afterwards: `unset LOCALFISCAL_DB` or `Remove-Item Env:LOCALFISCAL_DB`.
 
-The ledger path defaults to the working folder's `data/ledger.db`. Normal report/invoice outputs also use working-folder paths even when the ledger is elsewhere; the demo keeps all outputs in its new folder. Check unreadable-receipt warnings manually. No background workers or automatic backups exist. A generation error removes partial demo output; if the process was forcibly terminated, inspect any remaining folder and remove it only after confirming it contains sample data.
+The ledger path defaults to the working folder's `data/ledger.db`. Normal report/invoice outputs also use working-folder paths even when the ledger is elsewhere. The demo builds privately and atomically publishes completed books without replacing any existing path. Linux uses `renameat2(RENAME_NOREPLACE)`, macOS `renamex_np(RENAME_EXCL)`, and Windows a non-replacing rename; an unsupported platform/filesystem fails closed. Check unreadable-receipt warnings manually. No background workers or automatic backups exist. Generation errors clean the private staging area without deleting the destination. Requested parent directories may remain. After a forced process termination, inspect any `.localfiscal-demo-*` staging folder and remove it only after confirming ownership and fictional contents.
 
 ## Docker alternative
 

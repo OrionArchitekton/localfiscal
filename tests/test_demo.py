@@ -60,7 +60,7 @@ def test_failed_demo_removes_partial_output_and_can_be_retried(tmp_path, monkeyp
         with pytest.raises(OSError, match="simulated"):
             demo_module.create_demo(target)
     assert not target.exists()
-    assert demo_module.create_demo(target) == target
+    assert demo_module.create_demo(target)[0] == target
 
 
 def test_unreadable_sample_receipt_stops_without_inventing_amounts(tmp_path, monkeypatch):
@@ -72,3 +72,42 @@ def test_unreadable_sample_receipt_stops_without_inventing_amounts(tmp_path, mon
     assert result.exit_code == 2
     assert "sample receipt" in result.output.lower()
     assert not target.exists()
+
+
+def test_demo_refuses_a_destination_swapped_to_a_symlink_during_generation(tmp_path, monkeypatch):
+    target = tmp_path / "sample"
+    real = tmp_path / "private-books"
+    real.mkdir()
+    sentinel = real / "keep.txt"
+    sentinel.write_text("private existing data")
+    generate = demo_module.generate_invoice_pdf
+
+    def swap_destination(*args, **kwargs):
+        if target.exists():
+            target.rename(tmp_path / "displaced-sample")
+        target.symlink_to(real, target_is_directory=True)
+        return generate(*args, **kwargs)
+
+    monkeypatch.setattr(demo_module, "generate_invoice_pdf", swap_destination)
+    result = CliRunner().invoke(app, ["demo", "--out", str(target)])
+    assert result.exit_code == 2
+    assert target.is_symlink()
+    assert set(real.iterdir()) == {sentinel}
+    assert sentinel.read_text() == "private existing data"
+
+
+def test_demo_does_not_replace_an_empty_directory_created_during_generation(tmp_path, monkeypatch):
+    target = tmp_path / "sample"
+    generate = demo_module.generate_invoice_pdf
+    identity = []
+
+    def concurrent_directory(*args, **kwargs):
+        target.mkdir()
+        identity.append(target.stat().st_ino)
+        return generate(*args, **kwargs)
+
+    monkeypatch.setattr(demo_module, "generate_invoice_pdf", concurrent_directory)
+    result = CliRunner().invoke(app, ["demo", "--out", str(target)])
+    assert result.exit_code == 2
+    assert target.stat().st_ino == identity[0]
+    assert list(target.iterdir()) == []
