@@ -138,5 +138,5 @@ def export_transactions(
         raise ValueError(f"unknown export format: {fmt!r} (use csv or ofx)")
     dest = Path(out) if out else Path("data") / f"export.{ext}"
     dest.parent.mkdir(parents=True, exist_ok=True)
-    dest.write_text(body, encoding="utf-8")
+    dest.write_text(body, encoding="utf-8", newline="")
     return dest

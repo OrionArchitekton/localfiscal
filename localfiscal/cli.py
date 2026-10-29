@@ -146,6 +146,27 @@ def export(
 
 
 @app.command()
+def demo(out: Path = typer.Option(Path("demo-books"), "--out", help="New folder for fictional sample books")):
+    """Try a fictional receipt, ledger, invoice and report without using your real books."""
+    from .demo import create_demo
+
+    try:
+        folder, totals = create_demo(out)
+    except FileExistsError:
+        typer.echo("ERROR: output path already exists; choose a new folder with --out.", err=True)
+        raise typer.Exit(2) from None
+    except (ValueError, OSError) as exc:
+        typer.echo(f"ERROR: {exc}", err=True)
+        raise typer.Exit(2) from None
+    typer.echo(f"DEMO: {folder.resolve()}")
+    typer.echo("Open report-sample.md, invoice.pdf or transactions.csv in that folder.")
+    typer.echo(
+        f"Fictional data: income {format_money(totals['income'])}, "
+        f"expenses {format_money(totals['expense'])}, net {format_money(totals['net'])}."
+    )
+
+
+@app.command()
 def health():
     """Quick health + db check."""
     db = _db_path()

@@ -1,0 +1,133 @@
+import csv
+from pathlib import Path
+
+import pytest
+from pypdf import PdfReader
+from typer.testing import CliRunner
+
+from localfiscal import demo as demo_module
+from localfiscal.cli import app
+from localfiscal.ledger import Ledger
+from localfiscal.report import report_data
+
+
+def test_demo_creates_sample_books_without_touching_real_ledger(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    real = tmp_path / "private.db"
+    monkeypatch.setenv("LOCALFISCAL_DB", str(real))
+    result = CliRunner().invoke(app, ["demo", "--out", "sample"])
+    assert result.exit_code == 0, result.output
+    folder = Path("sample")
+    ledger = Ledger(folder / "ledger.db")
+    summary = report_data(ledger, "sample")
+    assert summary["count"] == 3
+    assert summary["currencies"]["USD"]["net"] == 119550
+    assert (folder / "receipt.txt").read_text().endswith("TOTAL $42.00\n")
+    assert "$1,195.50" in (folder / "report-sample.md").read_text()
+    with (folder / "transactions.csv").open() as stream:
+        assert len(list(csv.DictReader(stream))) == 3
+    csv_bytes = (folder / "transactions.csv").read_bytes()
+    assert b"\r\r\n" not in csv_bytes
+    assert len(csv_bytes.splitlines()) == 4
+    assert "$1,250.00" in PdfReader(folder / "invoice.pdf").pages[0].extract_text()
+    assert not real.exists()
+    assert set(tmp_path.iterdir()) == {tmp_path / "sample"}
+    assert {p.name for p in folder.iterdir()} == {
+        "receipt.txt", "ledger.db", "invoice.pdf", "report-sample.md", "transactions.csv",
+    }
+
+
+@pytest.mark.parametrize("kind", ["folder", "file", "symlink"])
+def test_demo_refuses_existing_path(tmp_path, kind):
+    target = tmp_path / "sample"
+    if kind == "folder":
+        target.mkdir()
+    elif kind == "file":
+        target.write_text("private")
+    else:
+        real = tmp_path / "real"
+        real.mkdir()
+        target.symlink_to(real, target_is_directory=True)
+    result = CliRunner().invoke(app, ["demo", "--out", str(target)])
+    assert result.exit_code == 2
+    assert "already exists" in result.output
+    assert not (target / "ledger.db").exists()
+
+
+def test_demo_csv_has_no_blank_records_with_windows_text_translation(tmp_path, monkeypatch):
+    open_path = Path.open
+
+    def windows_open(path, mode="r", buffering=-1, encoding=None, errors=None, newline=None):
+        if path.name == "transactions.csv" and "b" not in mode and newline is None:
+            newline = "\r\n"
+        return open_path(path, mode, buffering, encoding, errors, newline)
+
+    monkeypatch.setattr(Path, "open", windows_open)
+    target = tmp_path / "sample"
+    result = CliRunner().invoke(app, ["demo", "--out", str(target)])
+    assert result.exit_code == 0, result.output
+    data = (target / "transactions.csv").read_bytes()
+    assert b"\r\r\n" not in data
+    assert len(data.splitlines()) == 4  # Header and three fictional transactions.
+
+
+def test_failed_demo_removes_partial_output_and_can_be_retried(tmp_path, monkeypatch):
+    target = tmp_path / "sample"
+    with monkeypatch.context() as patch:
+        def fail_invoice(*args, **kwargs):
+            raise OSError("simulated disk failure")
+        patch.setattr(demo_module, "generate_invoice_pdf", fail_invoice)
+        with pytest.raises(OSError, match="simulated"):
+            demo_module.create_demo(target)
+    assert not target.exists()
+    assert demo_module.create_demo(target)[0] == target
+
+
+def test_unreadable_sample_receipt_stops_without_inventing_amounts(tmp_path, monkeypatch):
+    target = tmp_path / "sample"
+    monkeypatch.setattr(
+        demo_module, "extract_receipt", lambda path: {"needs_review": True, "amount_minor": None}
+    )
+    result = CliRunner().invoke(app, ["demo", "--out", str(target)])
+    assert result.exit_code == 2
+    assert "sample receipt" in result.output.lower()
+    assert not target.exists()
+
+
+def test_demo_refuses_a_destination_swapped_to_a_symlink_during_generation(tmp_path, monkeypatch):
+    target = tmp_path / "sample"
+    real = tmp_path / "private-books"
+    real.mkdir()
+    sentinel = real / "keep.txt"
+    sentinel.write_text("private existing data")
+    generate = demo_module.generate_invoice_pdf
+
+    def swap_destination(*args, **kwargs):
+        if target.exists():
+            target.rename(tmp_path / "displaced-sample")
+        target.symlink_to(real, target_is_directory=True)
+        return generate(*args, **kwargs)
+
+    monkeypatch.setattr(demo_module, "generate_invoice_pdf", swap_destination)
+    result = CliRunner().invoke(app, ["demo", "--out", str(target)])
+    assert result.exit_code == 2
+    assert target.is_symlink()
+    assert set(real.iterdir()) == {sentinel}
+    assert sentinel.read_text() == "private existing data"
+
+
+def test_demo_does_not_replace_an_empty_directory_created_during_generation(tmp_path, monkeypatch):
+    target = tmp_path / "sample"
+    generate = demo_module.generate_invoice_pdf
+    identity = []
+
+    def concurrent_directory(*args, **kwargs):
+        target.mkdir()
+        identity.append(target.stat().st_ino)
+        return generate(*args, **kwargs)
+
+    monkeypatch.setattr(demo_module, "generate_invoice_pdf", concurrent_directory)
+    result = CliRunner().invoke(app, ["demo", "--out", str(target)])
+    assert result.exit_code == 2
+    assert target.stat().st_ino == identity[0]
+    assert list(target.iterdir()) == []
