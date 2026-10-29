@@ -60,9 +60,9 @@ Unreadable amounts are flagged for manual entry. Generating an invoice does **no
 
 The default code path makes no network calls and has no telemetry. Optional vision sends a receipt to an Ollama endpoint only when explicitly enabled; use an endpoint you control. The web server binds to loopback and has no authentication: keep it on your own computer. The application does not encrypt financial files or backups.
 
-## Optional setup bundle (proposal)
+## Optional setup bundle
 
-**Price TODO; suggested $99 USD one-time.** Proposed scope: guided pipx installation on one computer, supplied [category/receipt templates](templates/README.md), example invoice, backup walkthrough and one 45-minute remote support session. Dan must approve price, availability and terms before this is offered. No ongoing bookkeeping, tax work, bank integration or unlimited support. The software remains MIT; the fee would pay for setup and support.
+**$99 USD one-time**, approved for the setup bundle: guided pipx installation on one computer, supplied [category/receipt templates](templates/README.md), example invoice, backup walkthrough and one 45-minute remote support session. Availability, support terms and checkout must be finalized before sale. No ongoing bookkeeping, tax work, bank integration or unlimited support. The software remains MIT; the fee pays for setup and support.
 
 The [Swap Meet listing draft](SWAPMEET.md) has no checkout yet.
 
