@@ -8,6 +8,8 @@ A solo business owner can try receipts, a ledger, an invoice and an export witho
 2. The owner supplies a different output folder with `--out`. The demo writes only inside that new folder and ignores the real ledger environment setting.
 3. If the output path already exists (including a symlink), the command exits with a useful error and leaves all existing contents untouched. Running twice cannot duplicate entries.
 
+4. A receipt-reading or generation error exits unsuccessfully, removes the new partial output and allows a retry. Echoed totals come from the generated ledger.
+
 The existing ledger, report and invoice behavior stays compatible. Reports currently summarize the whole ledger; their period label does not filter dates. Receipt source files and generated PDFs are separate files, not attachments stored in the database.
 
 ## Test seam

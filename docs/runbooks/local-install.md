@@ -20,12 +20,12 @@ Install Python 3.11+ from [python.org](https://www.python.org/downloads/) and pi
 Open a new terminal, then:
 
 ```sh
-pipx install https://github.com/OrionArchitekton/localfiscal/archive/refs/heads/main.zip
+pipx install https://github.com/OrionArchitekton/localfiscal/archive/ad603888cb3822959fa790aed5fc96312bfb6a8d.zip
 localfiscal health
 localfiscal demo --out first-test
 ```
 
-No standalone binary installer is shipped. Stop the web server and back up books before `pipx upgrade localfiscal`.
+No standalone binary installer is shipped. This archive is pinned to the reviewed implementation commit. It does not track future updates. Stop the web server and back up books before upgrading: uninstall with `pipx uninstall localfiscal`, then install a newer explicitly reviewed commit archive.
 
 ## Validate and monitor
 
@@ -47,7 +47,7 @@ localfiscal-web
 
 Open [the UI](http://127.0.0.1:8080), check health and download the report. Stop with Ctrl+C. Clear the setting afterwards: `unset LOCALFISCAL_DB` or `Remove-Item Env:LOCALFISCAL_DB`.
 
-The ledger path defaults to the working folder's `data/ledger.db`. Normal report/invoice outputs also use working-folder paths even when the ledger is elsewhere; the demo keeps all outputs in its new folder. Check unreadable-receipt warnings manually. No background workers or automatic backups exist.
+The ledger path defaults to the working folder's `data/ledger.db`. Normal report/invoice outputs also use working-folder paths even when the ledger is elsewhere; the demo keeps all outputs in its new folder. Check unreadable-receipt warnings manually. No background workers or automatic backups exist. A generation error removes partial demo output; if the process was forcibly terminated, inspect any remaining folder and remove it only after confirming it contains sample data.
 
 ## Docker alternative
 
