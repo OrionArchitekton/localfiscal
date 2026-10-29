@@ -28,7 +28,7 @@ First install [Python 3.11+](https://www.python.org/downloads/) and [pipx](https
 pipx install https://github.com/OrionArchitekton/localfiscal/archive/fb87e96a7f193e870239c7f47eb7d5209f74cf84.zip
 ```
 
-This pins the implementation reviewed in this PR. It installs from this repository, without relying on a similarly named PyPI package or requiring Git. If the installed command is not found, run `pipx ensurepath` and open a new terminal. See the [install/recovery guide](docs/runbooks/local-install.md) for prerequisites and Docker.
+This pins the localfiscal source; pipx resolves dependencies from PyPI at installation time, and those versions are not locked. It installs from this repository, without relying on a similarly named PyPI package or requiring Git. If the installed command is not found, run `pipx ensurepath` and open a new terminal. See the [install/recovery guide](docs/runbooks/local-install.md) for prerequisites and Docker.
 
 Use a local disk for demo output and books; network filesystems are not supported.
 

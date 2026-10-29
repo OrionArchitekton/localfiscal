@@ -25,7 +25,7 @@ localfiscal health
 localfiscal demo --out first-test
 ```
 
-No standalone binary installer is shipped. This archive is pinned to the reviewed implementation commit. It does not track future updates. Stop the web server and back up books before upgrading: uninstall with `pipx uninstall localfiscal`, then install a newer explicitly reviewed commit archive.
+No standalone binary installer is shipped. This archive pins localfiscal's source commit and does not track future source updates. Dependencies are resolved from PyPI at install time; their versions are not locked by this archive. Stop the web server and back up books before upgrading: uninstall with `pipx uninstall localfiscal`, then install a newer explicitly reviewed commit archive.
 
 Use a local disk. NFS and other remote filesystems are outside the supported demo/ledger path: a remote rename acknowledgement can be ambiguous.
 
