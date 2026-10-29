@@ -25,7 +25,7 @@ Reports include **all dates**: their period argument is a label, not a date filt
 First install [Python 3.11+](https://www.python.org/downloads/) and [pipx](https://pipx.pypa.io/latest/how-to/install-pipx.html). Open Terminal (macOS/Linux) or PowerShell (Windows) and paste one command:
 
 ```sh
-pipx install https://github.com/OrionArchitekton/localfiscal/archive/ad603888cb3822959fa790aed5fc96312bfb6a8d.zip
+pipx install https://github.com/OrionArchitekton/localfiscal/archive/eed708a8e517c5d9586d26583e37d5a7c0317edc.zip
 ```
 
 This pins the implementation reviewed in this PR. It installs from this repository, without relying on a similarly named PyPI package or requiring Git. If the installed command is not found, run `pipx ensurepath` and open a new terminal. See the [install/recovery guide](docs/runbooks/local-install.md) for prerequisites and Docker.

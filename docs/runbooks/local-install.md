@@ -20,7 +20,7 @@ Install Python 3.11+ from [python.org](https://www.python.org/downloads/) and pi
 Open a new terminal, then:
 
 ```sh
-pipx install https://github.com/OrionArchitekton/localfiscal/archive/ad603888cb3822959fa790aed5fc96312bfb6a8d.zip
+pipx install https://github.com/OrionArchitekton/localfiscal/archive/eed708a8e517c5d9586d26583e37d5a7c0317edc.zip
 localfiscal health
 localfiscal demo --out first-test
 ```
