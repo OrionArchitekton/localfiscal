@@ -2,6 +2,8 @@
 
 A solo business owner can try receipts, a ledger, an invoice and an export without entering private information.
 
+Use a local filesystem; remote/NFS filesystems are outside this sample-books contract.
+
 ## Scenarios and acceptance
 
 1. After installing the package, the owner runs `localfiscal demo`. A new `demo-books` folder contains a fictional receipt, a three-entry USD ledger, an invoice PDF, a Markdown report and a transaction CSV. Income is $1,250.00, expenses are $54.50 and net is $1,195.50. No network or optional vision endpoint is used.

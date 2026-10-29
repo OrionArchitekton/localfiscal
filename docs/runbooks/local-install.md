@@ -20,12 +20,14 @@ Install Python 3.11+ from [python.org](https://www.python.org/downloads/) and pi
 Open a new terminal, then:
 
 ```sh
-pipx install https://github.com/OrionArchitekton/localfiscal/archive/eed708a8e517c5d9586d26583e37d5a7c0317edc.zip
+pipx install https://github.com/OrionArchitekton/localfiscal/archive/4d465a37ff2782a17b6ad17e927e0fbfa0bc10de.zip
 localfiscal health
 localfiscal demo --out first-test
 ```
 
 No standalone binary installer is shipped. This archive is pinned to the reviewed implementation commit. It does not track future updates. Stop the web server and back up books before upgrading: uninstall with `pipx uninstall localfiscal`, then install a newer explicitly reviewed commit archive.
+
+Use a local disk. NFS and other remote filesystems are outside the supported demo/ledger path: a remote rename acknowledgement can be ambiguous.
 
 ## Validate and monitor
 
