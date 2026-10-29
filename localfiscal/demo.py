@@ -16,6 +16,7 @@ from .report import generate_report, report_data
 
 def _publish_new_directory(staged: Path, destination: Path) -> None:
     """Atomically publish without replacing a file, directory or symlink."""
+    result = 0
     if sys.platform == "win32":
         # Windows rename refuses every existing destination (unlike POSIX rename).
         os.rename(staged, destination)
