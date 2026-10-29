@@ -27,3 +27,14 @@ jobs:
         run: |
           python -m pip install pipx
           python scripts/check_installed_demo.py
+
+  required-test:
+    name: test
+    if: ${{ always() }}
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require every native platform test to succeed
+        env:
+          PLATFORM_RESULT: ${{ needs.test.result }}
+        run: test "$PLATFORM_RESULT" = success
