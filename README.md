@@ -1,87 +1,78 @@
 # localfiscal
 
-Local-first, private receipt + invoice + ledger for solopreneurs and small businesses.
-Your books stay on your machine in a single sqlite file — no cloud, no account, no data exfil.
+**Receipts, simple invoices and a private ledger for a one-person business.**
 
-**The problem it solves:** receipt chaos and tax-time pain without handing your financial
-data to a SaaS. localfiscal keeps everything local and gets the boring, important parts right
-— money is exact, amounts are never invented, and exports import cleanly into accounting tools.
+Keep income and expenses on your own computer instead of paying for a bookkeeping suite you barely use. Your ledger is one SQLite file; receipt originals, invoice PDFs and exports are separate files. No account or subscription is required to run the MIT-licensed code.
 
-## What it does (all shipped, all tested)
+![The localfiscal browser screen running locally](docs/images/local-web.png)
 
-- **Exact money.** Amounts are stored as integer minor units (cents) with an ISO-4217 currency —
-  never floats. The markdown, JSON, and CSV reports always agree to the cent.
-- **Receipt extraction.** A heuristic parser reads vendor / amount / date / category from
-  image or PDF receipts (locale-aware, prefers the grand **TOTAL**). When it can't read an amount
-  it flags the receipt **needs-review** rather than inventing one.
-- **Optional local vision.** Off by default. Point it at your own [Ollama](https://ollama.com)
-  endpoint (`--vision` / `$OLLAMA_URL`) to use a local vision model for OCR. No endpoint → no
-  network call, ever.
-- **Invoices.** Generate clean invoice PDFs (fpdf2).
-- **Reports.** Income / expense / **net** per currency, as Markdown, JSON, or CSV.
-- **Exports accountants use.** Real **CSV** (RFC-4180) and **OFX/QFX** of your ledger.
-- **CLI + web UI.** Six CLI commands; a minimal FastAPI web UI (loopback-only by default).
-- **One-command Docker.**
+## What it can replace
 
-MIT. Dan Mercede / OrionArchitekton.
+For solo users who manually record transactions, localfiscal can cover the basic receipt, invoice-PDF and ledger-export jobs they might otherwise use FreshBooks, Wave, QuickBooks Online or Stripe Invoicing for.
 
-**Releases:** https://github.com/OrionArchitekton/localfiscal/releases ·
-**Source:** https://github.com/OrionArchitekton/localfiscal · **Changes:** [CHANGELOG.md](CHANGELOG.md)
+| Job | Included | Left out compared with a full paid service |
+|---|---|---|
+| Receipts | Extract PDF/text receipts; flag unreadable amounts | No bank feeds, guaranteed OCR or reconciliation. Scanned images generally need optional local vision. |
+| Invoices | Basic invoice PDFs | No card collection, payment pages, reminders, recurring billing or invoice-number workflow |
+| Books | Income, expenses, exact minor-unit money and per-currency totals | No double-entry accounting, payroll, tax filing or inventory |
+| Accountant handoff | CSV and OFX transaction exports | No guarantee every accounting product imports every field; check a sample first |
+| Access | CLI and a small local browser screen | No mobile app, cloud sync, authentication or multi-user permissions |
 
-## Quick start (Docker)
+Reports include **all dates**: their period argument is a label, not a date filter. This is recordkeeping software, not accounting or tax advice.
 
-```bash
-git clone https://github.com/OrionArchitekton/localfiscal.git
-cd localfiscal
-docker compose up --build
-# open http://127.0.0.1:8080
+## Install on macOS, Windows or Linux
+
+First install [Python 3.11+](https://www.python.org/downloads/) and [pipx](https://pipx.pypa.io/latest/how-to/install-pipx.html). Open Terminal (macOS/Linux) or PowerShell (Windows) and paste one command:
+
+```sh
+pipx install https://github.com/OrionArchitekton/localfiscal/archive/refs/heads/main.zip
 ```
 
-Your ledger persists in the `localfiscal-data` Docker volume (the container runs as a non-root
-user, so a named volume works out of the box; `docker volume inspect localfiscal_localfiscal-data`
-to find it). To use a host folder instead, see the note in `docker-compose.yml`.
+This installs from this repository, without relying on a similarly named PyPI package or requiring Git. If the installed command is not found, run `pipx ensurepath` and open a new terminal. See the [install/recovery guide](docs/runbooks/local-install.md) for prerequisites and Docker.
 
-The web UI binds to **127.0.0.1 only** by default and has **no authentication** — it is meant for
-your own machine. To expose it on a LAN, change the compose port mapping to `0.0.0.0:8080:8080`
-and put it behind your own auth/proxy first.
+## Try it in five minutes
 
-## Install (CLI, Python 3.11+)
+1. Open a terminal in a folder such as Documents.
+2. Run `localfiscal demo`.
+3. Open the new `demo-books` folder in Finder or File Explorer. Open `invoice.pdf`, `transactions.csv` in a spreadsheet, and `report-sample.md` in a text editor. The fictional books contain **$1,250.00 income, $54.50 expenses and $1,195.50 net**. `receipt.txt` is the sample receipt and `ledger.db` is the ledger.
+4. Run `localfiscal-web`, open [127.0.0.1:8080](http://127.0.0.1:8080), and stop with Ctrl+C. This screen uses your normal ledger location; the guide explains how to select the sample instead.
 
-```bash
-python -m venv .venv && source .venv/bin/activate
+The demo never touches your real ledger and refuses to overwrite an existing path. Try `localfiscal demo --out another-sample` for another copy. No API key, vision model or internet is needed after installation.
+
+## Start your own books
+
+Use the same working folder each time: the default ledger is `data/ledger.db` relative to that folder. Back it up along with original receipts and PDFs. Set `LOCALFISCAL_DB` to an absolute path for a fixed ledger location; see the guide for PowerShell and macOS/Linux examples.
+
+```sh
+localfiscal add 2026-10-01 "Example Client" 1250.00 --income
+localfiscal add 2026-10-02 "Office supplies" 42.00 --category supplies
+localfiscal ingest receipt.pdf
+localfiscal invoice "Example Client" 1250.00 --out invoice.pdf
+localfiscal report
+localfiscal export --fmt csv --out transactions.csv
+```
+
+Unreadable amounts are flagged for manual entry. Generating an invoice does **not** record income; record the payment when it arrives. There is no transaction edit/delete command yet. Check entries and retain backups. The browser screen offers receipt upload, invoice generation and report download; manual entry and CSV export use the CLI.
+
+## Privacy
+
+The default code path makes no network calls and has no telemetry. Optional vision sends a receipt to an Ollama endpoint only when explicitly enabled; use an endpoint you control. The web server binds to loopback and has no authentication: keep it on your own computer. The application does not encrypt financial files or backups.
+
+## Optional setup bundle (proposal)
+
+**Price TODO; suggested $99 USD one-time.** Proposed scope: guided pipx installation on one computer, supplied [category/receipt templates](templates/README.md), example invoice, backup walkthrough and one 45-minute remote support session. Dan must approve price, availability and terms before this is offered. No ongoing bookkeeping, tax work, bank integration or unlimited support. The software remains MIT; the fee would pay for setup and support.
+
+The [Swap Meet listing draft](SWAPMEET.md) has no checkout yet.
+
+## Development
+
+```sh
+python -m venv .venv
+# Activate your environment, then:
 pip install -e ".[dev]"
-localfiscal --help
+pytest --cov=localfiscal --cov-fail-under=85
+ruff check .
+mypy
 ```
 
-## CLI usage
-
-```bash
-localfiscal add 2026-06-28 "Coffee Shop" 4.50 --category meals       # expense
-localfiscal add 2026-06-01 "Client A" '$1,234.56' --income           # income (single-quote $ in shells)
-localfiscal ingest receipt.pdf                                       # parse a receipt
-localfiscal ingest receipt.jpg --vision --ollama-url http://localhost:11434
-localfiscal list-tx
-localfiscal invoice "Acme Co" 1200 --out invoice.pdf
-localfiscal report --fmt md         # or json | csv
-localfiscal export --fmt csv        # or ofx  — full ledger for your accountant
-localfiscal health
-```
-
-Amounts accept grouped/locale formats (`1,234.56`, `1.234,56`) and are validated at the boundary
-(no negative, non-finite, or absurd values reach the ledger).
-
-## Privacy & security
-
-- **No network calls** unless you explicitly enable Ollama vision. No telemetry.
-- SQL is fully parameterized; uploaded filenames are sanitized (no path traversal).
-- The Docker image runs as a **non-root** user; the server binds loopback by default.
-- The web UI has no auth — keep it local or front it with your own auth.
-
-## Roadmap
-
-Bank-statement auto-import, recurring transactions, an MCP server surface for agents, and
-multi-user self-host are deferred to a later release. See [CHANGELOG.md](CHANGELOG.md).
-
-## Contributing
-
-See [CONTRIBUTING.md](CONTRIBUTING.md). Tests: `pytest -q`. Lint/type: `ruff check . && mypy`.
+See [CONTRIBUTING.md](CONTRIBUTING.md), [CHANGELOG.md](CHANGELOG.md), the [sample-books spec](specs/sample-books-spec.md) and the [MIT license](LICENSE).
